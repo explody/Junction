@@ -1,11 +1,11 @@
 [tool.poetry]
 name = "confluence-junction"
-version = "0.1.1"
+version = "0.1.2"
 description = "Publish to and manage Confluence spaces with markdown files tracked in Git."
-authors = ["HUU <readabook123@protonmail.com>"]
+authors = ["HUU <readabook123@protonmail.com>", "Mike Culbertson <explody@explody.io>"]
 license = "MIT"
 readme = "README.md"
-repository = "https://github.com/HUU/Junction"
+repository = "https://github.com/explody/Junction"
 keywords = ["confluence", "markdown", "git", "sync", "convert"]
 classifiers = [
     "Development Status :: 4 - Beta",

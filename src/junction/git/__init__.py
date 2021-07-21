@@ -3,9 +3,11 @@ from pathlib import Path
 from enum import Enum
 from typing import List, Optional, Generator, Union, Iterable
 from git import Repo, Commit, NULL_TREE, Diff, Tree
+import yaml
 
 
 logger = logging.getLogger(__name__)
+YAML_BOUNDARY = '---'
 
 
 def find_repository_root(path: Path) -> Optional[Path]:
@@ -82,6 +84,7 @@ class Modification:
         new_path: Optional[Union[str, Path]],
         change_type: ModificationType,
         source_code: Optional[str] = None,
+        front_matter: Optional[dict] = {},
     ):
         """Initializes an instance of Modification.
 
@@ -97,6 +100,7 @@ class Modification:
         self._new_path = Path(new_path) if new_path is not None else None
         self.change_type = change_type
         self.source_code = source_code
+        self.front_matter = front_matter
 
     @property
     def previous_path(self) -> Optional[Path]:
@@ -138,6 +142,7 @@ class Modification:
         Returns:
             Modification -- A modification representing the provided diff.
         """
+        front_matter = {}
         old_path = diff.a_path
         new_path = diff.b_path
         change_type = Modification._determine_modification_type(diff)
@@ -149,7 +154,13 @@ class Modification:
             else None
         )
 
-        mod = Modification(old_path, new_path, change_type, source_code)
+        if source_code is not None:
+            if source_code.startswith(b'---'):
+                front_yaml, source_code = source_code.split(b'\n---\n')
+                front_matter = yaml.load(front_yaml.decode('utf-8'), Loader=yaml.SafeLoader)
+
+        mod = Modification(old_path, new_path, change_type, source_code, front_matter)
+
         logger.debug(
             "%s, with %s bytes of source code.",
             mod,
@@ -219,4 +230,5 @@ def filter_modifications_to_folder(
                 else None,
                 modification_type,
                 mod.source_code,
+                mod.front_matter,
             )

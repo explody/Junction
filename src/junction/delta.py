@@ -26,6 +26,7 @@ way to replicate that procedure.
 """
 
 import logging
+import pprint
 from abc import ABC, abstractmethod
 from typing import List, Iterable, Any
 from uuid import uuid4
@@ -36,6 +37,7 @@ from junction.confluence.models import (
     UpdateContent,
     Body,
     ContentBody,
+    ContentMetadata,
     CreateContent,
     Space,
     Content,
@@ -43,8 +45,9 @@ from junction.confluence.models import (
     ContentPage,
     Version,
 )
+from junction.confluence.models.metadata import construct_metadata
 from junction.git import Modification, ModificationType
-from junction.util import for_all, JunctionError
+from junction.util import for_all, DotDict, JunctionError
 
 
 logger = logging.getLogger(__name__)
@@ -178,9 +181,13 @@ class MovePage(PageAction):
 
 
 class CreatePage(PageAction):
-    """Create a new page under a particular parent (or the space homepage if no parents specified)"""
-
-    def __init__(self, title: str, new_body: str, ancestor_titles: List[str] = []):
+    def __init__(
+        self,
+        title: str,
+        new_body: str,
+        metadata: ContentMetadata,
+        ancestor_titles: List[str] = [],
+    ):
         """Initializes an instance of CreatePage.
 
         Arguments:
@@ -193,6 +200,9 @@ class CreatePage(PageAction):
         super().__init__(title)
         self.new_body = new_body
         self.ancestor_titles = ancestor_titles if ancestor_titles else []
+        self.metadata = metadata
+
+    """Create a new page under a particular parent (or the space homepage if no parents specified)"""
 
     def execute(self, api_client: Confluence) -> Content:
         """Creates a brand new page under a particular parent.  If no parents are specified, Confluence makes the page under the space homepage.
@@ -229,6 +239,7 @@ class CreatePage(PageAction):
                 type="page",
                 space=Space(key=api_client.space_key),
                 ancestors=[Content(id=parent.id)] if parent else None,
+                metadata=self.metadata,
                 body=Body(
                     storage=ContentBody(value=self.new_body, representation="storage")
                 ),
@@ -291,7 +302,13 @@ class UpdatePage(PageAction):
     """Updates the content of a page.  Cannot move (change the title or parent) of a page even though Confluence supports this.  Use
     MovePage if you want to do that."""
 
-    def __init__(self, title: str, new_body: str, ancestor_titles: List[str] = []):
+    def __init__(
+        self,
+        title: str,
+        new_body: str,
+        metadata: ContentMetadata,
+        ancestor_titles: List[str] = [],
+    ):
         """Initializes an instance of UpdatePage.  This class should not be used for moving a page, it is only for changing the content
         of an existing page.
 
@@ -306,6 +323,7 @@ class UpdatePage(PageAction):
         super().__init__(title)
         self.new_body = new_body
         self.ancestor_titles = ancestor_titles if ancestor_titles else []
+        self.metadata = metadata
 
     def execute(self, api_client: Confluence) -> Content:
         """Updates the content of an already existing page.  If the page does not exist, this operation silently switches to creating
@@ -333,6 +351,8 @@ class UpdatePage(PageAction):
                 self.ancestor_titles, current_ancestors
             )
 
+            # While UpdatePage objects store metadata just like CreatePage, don't actually pass
+            # this to the Confluence API as it triggers as-of-yet unresolved API errors.
             update_request = UpdateContent(
                 title=self.title,
                 type="page",
@@ -346,7 +366,7 @@ class UpdatePage(PageAction):
                 else [],
                 body=Body(
                     storage=ContentBody(value=self.new_body, representation="storage")
-                ),
+                )
             )
 
             if existing.id:
@@ -365,9 +385,9 @@ class UpdatePage(PageAction):
                 "Trying to update %s but it doesn't exist, creating instead.",
                 self.title,
             )
-            return CreatePage(self.title, self.new_body, self.ancestor_titles).execute(
-                api_client
-            )
+            return CreatePage(
+                self.title, self.new_body, self.metadata, self.ancestor_titles
+            ).execute(api_client)
 
 
 class DeletePage(PageAction):
@@ -489,18 +509,42 @@ class Delta(object):
         me = Delta()
         for mod in modifications:
             if not mod.path:
+                logger.debug("Modification has no path, skipping.")
                 continue
 
+            if not mod.front_matter:
+                logger.debug("Page has no front matter, skipping.")
+                continue
+
+            if not mod.front_matter.get("publish"):
+                logger.debug(
+                    "Modification {} front matter ['publish'] is not set to True, "
+                    "skipping".format(mod.path)
+                )
+                continue
+
+            front_matter = DotDict(mod.front_matter)
             title = mod.path.stem
             ancestors = list(mod.path.parts[:-1])
+            metadata = construct_metadata(front_matter)
 
             if mod.change_type == ModificationType.ADD:
                 me.adds.append(
-                    CreatePage(title, markdown_to_storage(mod.source_code), ancestors)
+                    CreatePage(
+                        title,
+                        markdown_to_storage(mod.source_code, mod.front_matter),
+                        metadata,
+                        ancestors,
+                    )
                 )
             elif mod.change_type == ModificationType.MODIFY:
                 me.updates.append(
-                    UpdatePage(title, markdown_to_storage(mod.source_code), ancestors)
+                    UpdatePage(
+                        title,
+                        markdown_to_storage(mod.source_code, mod.front_matter),
+                        metadata,
+                        ancestors,
+                    )
                 )
             elif mod.change_type == ModificationType.DELETE:
                 me.deletes.append(DeletePage(title))

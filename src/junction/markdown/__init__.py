@@ -10,6 +10,8 @@ from mdx_subscript import SubscriptExtension
 from mdx_emdash import EmDashExtension
 from mdx_urlize import UrlizeExtension
 
+from junction.markdown.layouts import apply_layout
+
 from junction.markdown.checklists import ChecklistExtension
 from junction.markdown.codeblocks import CodeBlockExtension
 from junction.markdown.status import StatusExtension
@@ -41,7 +43,10 @@ junctionMarkdown = Markdown(
 )
 
 
-def markdown_to_storage(text: Optional[Union[str, bytes]]) -> str:
+def markdown_to_storage(
+    text: Optional[Union[str, bytes]], front_matter: Optional[dict] = {}
+) -> str:
+
     if text is None:
         return ""
     elif isinstance(text, bytes):
@@ -50,5 +55,13 @@ def markdown_to_storage(text: Optional[Union[str, bytes]]) -> str:
     logger.debug("Compiling markdown to Confluence storage format: %s", text)
     result = junctionMarkdown.convert(text)
     junctionMarkdown.reset()
-    logger.debug("Resulting Confluence storage format: %s", result)
+    logger.debug("Applying content to layout: %s", text)
+
+    if front_matter.get('layout'):
+        logger.debug("Applying page layout: %s", front_matter['layout'])
+        result = apply_layout(result, front_matter)
+
+    with open("out.html", "w") as outfile:
+        outfile.write(result)
+
     return result

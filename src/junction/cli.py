@@ -96,13 +96,14 @@ def _validate_git_dir(ctx: click.Context, param: click.Parameter, value: str) ->
 
 def _validate_commitish(ctx: click.Context, param: click.Parameter, value: str) -> str:
     try:
-        if ctx.obj.repo.commit(value):
+        if value == '' or ctx.obj.repo.commit(value):
             return value
         else:
             raise click.BadParameter("no commit found by dereferencing that commitish")
     except Exception:
         raise click.BadParameter(
-            "this is an invalid commit-ish; valid examples include HEAD~3 or a commit SHA"
+            '"{}" is an invalid commit-ish; valid examples include '
+            'HEAD~3 or a commit SHA'.format(value)
         )
 
 
@@ -114,8 +115,15 @@ def _validate_branch(ctx: click.Context, param: click.Parameter, value: str) -> 
 
 
 @main.command()
-@click.argument("since", default="HEAD^", callback=_validate_commitish)
-@click.argument("branch", default="master", callback=_validate_branch)
+@click.argument("branch", default="main", callback=_validate_branch)
+@click.option(
+    "--since",
+    default='',
+    required=False,
+    callback=_validate_commitish,
+    help="The commit hash/commit-ish to start from or don't pass this arg to use the entire "
+         "branch history",
+)
 @click.option(
     "--git-dir",
     envvar="GIT_DIR",
@@ -156,7 +164,7 @@ def delta(
     """
 
     filter_path = Path(content_path) if content_path else git_dir
-    commits = find_commits_on_branch_after(branch, since, my_ctx.repo)
+    commits = find_commits_on_branch_after(branch, since if since else None, my_ctx.repo)
     deltas = {
         c: Delta.from_modifications(
             filter_modifications_to_folder(get_modifications(c), filter_path)
@@ -178,7 +186,6 @@ def delta(
 
 def __pretty_print_deltas(deltas: Dict[Commit, Delta]) -> None:
     for commit, delta in deltas.items():
-
         all_operations = (
             delta.adds
             + delta.updates

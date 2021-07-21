@@ -377,6 +377,7 @@ class UpdateContent(ApiModel):
     status: Optional[str] = None
     ancestors: Optional[List["Content"]] = None
     body: Optional[Body] = None
+    metadata: Optional[ContentMetadata] = None
 
 
 class CreateContent(ApiModel):
@@ -388,6 +389,7 @@ class CreateContent(ApiModel):
     status: Optional[str] = None
     ancestors: Optional[List["Content"]] = None
     body: Optional[Body] = None
+    metadata: Optional[ContentMetadata] = None
 
 
 TContent = TypeVar("TContent", bound=Content)
