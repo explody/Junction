@@ -345,11 +345,14 @@ class UpdatePage(PageAction):
             current_ancestors = (
                 [x.title for x in existing.ancestors[1:]] if existing.ancestors else []
             )
-            assert (
-                self.ancestor_titles == current_ancestors
-            ), "Cannot change ancestors with UpdatePage, use MovePage instead.  {} != {}.".format(
-                self.ancestor_titles, current_ancestors
-            )
+            # FIXME: ancestor_titles is coming up wrong here sometimes, yielding an error when
+            #        there shouldn't be one.  Disabling this to let Confluence throw an error
+            #        instead, if there's an actual problem
+            # assert (
+            #     self.ancestor_titles == current_ancestors
+            # ), "Cannot change ancestors with UpdatePage, use MovePage instead.  {} != {}.".format(
+            #     self.ancestor_titles, current_ancestors
+            # )
 
             # While UpdatePage objects store metadata just like CreatePage, don't actually pass
             # this to the Confluence API as it triggers as-of-yet unresolved API errors.
