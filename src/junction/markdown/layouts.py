@@ -1,37 +1,21 @@
 import logging
-
-from typing import Union, Optional
-
-LAYOUTS = {
-    'centered': '''
-            <ac:structured-macro ac:name="column" ac:schema-version="1">
-                <ac:parameter ac:name="width">10%</ac:parameter>
-                <ac:rich-text-body></ac:rich-text-body>
-            </ac:structured-macro>
-            <ac:structured-macro ac:name="column" ac:schema-version="1">
-                <ac:parameter ac:name="width">80%</ac:parameter>
-                <ac:parameter ac:name="max-width">800px</ac:parameter>
-                <ac:rich-text-body>
-                    {content}
-                </ac:rich-text-body>
-            </ac:structured-macro>
-            <ac:structured-macro ac:name="column" ac:schema-version="1">
-                <ac:parameter ac:name="width">10%</ac:parameter>
-                <ac:rich-text-body></ac:rich-text-body>
-            </ac:structured-macro>''',
-    'wide': '''<ac:structured-macro ac:name="column" ac:schema-version="1">
-                <ac:parameter ac:name="width">100%</ac:parameter>
-                <ac:rich-text-body>{content}</ac:rich-text-body>
-            </ac:structured-macro>''',
-
-}
+import os
+import pathlib
 
 
 def apply_layout(content: str, front_matter: dict) -> str:
 
-    layout = front_matter.get('layout')
+    layouts_dir = os.path.join(pathlib.Path(__file__).parent.resolve(), "layouts")
+    layout = front_matter.get('layout', None)
+    layout_file = None
 
-    if layout not in LAYOUTS:
+    if layout:
+        layout_file = os.path.join(layouts_dir, "{}.html".format(layout))
+
+    if not os.path.exists(layout_file):
         return content
 
-    return LAYOUTS[layout].format(content=content)
+    with open(layout_file, "r") as layout_fh:
+        template = layout_fh.read()
+
+    return template.format(content=content)

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "confluence-junction"
-version = "0.1.3"
+version = "0.1.4"
 description = "Publish to and manage Confluence spaces with markdown files tracked in Git."
 authors = ["HUU <readabook123@protonmail.com>", "Mike Culbertson <explody@explody.io>"]
 license = "MIT"

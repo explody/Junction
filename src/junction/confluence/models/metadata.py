@@ -16,7 +16,7 @@ def construct_metadata(front_matter: DotDict) -> ContentMetadata:
 
     if front_matter.confluence_editor_version == 2:
 
-        appearance = front_matter.get("layout", "fixed-width")
+        appearance = front_matter.get("appearance", "fixed-width")
         if appearance not in ['full-width', 'fixed-width']:
             appearance = 'fixed-width'
 
