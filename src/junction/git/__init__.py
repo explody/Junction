@@ -7,7 +7,7 @@ import yaml
 
 
 logger = logging.getLogger(__name__)
-YAML_BOUNDARY = '---'
+YAML_BOUNDARY = "---"
 
 
 def find_repository_root(path: Path) -> Optional[Path]:
@@ -75,8 +75,8 @@ class ModificationType(Enum):
 
 
 class Modification:
-    """ Represents a modification to the filesystem.  This is used to abstract the details of git from other subsystems that consume information
-    about changes such as the Delta API. """
+    """Represents a modification to the filesystem.  This is used to abstract the details of git from other subsystems that consume information
+    about changes such as the Delta API."""
 
     def __init__(
         self,
@@ -155,9 +155,11 @@ class Modification:
         )
 
         if source_code is not None:
-            if source_code.startswith(b'---'):
-                front_yaml, source_code = source_code.split(b'\n---\n')
-                front_matter = yaml.load(front_yaml.decode('utf-8'), Loader=yaml.SafeLoader)
+            if source_code.startswith(b"---"):
+                front_yaml, source_code = source_code.split(b"\n---\n")
+                front_matter = yaml.load(
+                    front_yaml.decode("utf-8"), Loader=yaml.SafeLoader
+                )
 
         mod = Modification(old_path, new_path, change_type, source_code, front_matter)
 
@@ -188,7 +190,11 @@ def get_modifications(commit: Commit) -> List[Modification]:
         # initial commit
         diffs = commit.diff(NULL_TREE)
 
-    return [Modification.from_diff(d, tree=commit.tree) for d in diffs]
+    return [
+        Modification.from_diff(d, tree=commit.tree)
+        for d in diffs
+        if d.b_path.endswith("md")
+    ]
 
 
 def filter_modifications_to_folder(

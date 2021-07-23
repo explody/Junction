@@ -23,6 +23,7 @@ from junction.markdown.wiki_links import WikiLinkExtension
 
 logger = logging.getLogger(__name__)
 
+junctionMarkdown = None
 
 def markdown_to_storage(
     api_cient: Confluence,
