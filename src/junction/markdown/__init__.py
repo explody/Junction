@@ -30,7 +30,7 @@ junctionMarkdown = Markdown(
         SuperscriptExtension(),
         SubscriptExtension(),
         EmDashExtension(),
-        UrlizeExtension(),
+        # UrlizeExtension(),
         ChecklistExtension(),
         CodeBlockExtension(),
         StatusExtension(),
