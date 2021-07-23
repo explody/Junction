@@ -32,14 +32,23 @@ class WikiLinkPattern(LinkInlineProcessor):
         if not handled:
             return None, None, None
 
+        # Check if the "link" has a space key prepended
+        space_match = re.match('(?:([A-Z]{2,5}):)?(.+)', href)
+        page = space_match.group(2)
+        space = space_match.group(1)
+
+        element_props = {
+            "ri:content-title": html.escape(page, quote=False),
+            "ri:version-at-save": "1",
+        }
+        if space:
+            element_props['ri:space-key'] = space
+
         link = etree.Element("ac:link", {"ac:card-appearance": "inline"})
         etree.SubElement(
             link,
             "ri:page",
-            {
-                "ri:content-title": html.escape(href, quote=False),
-                "ri:version-at-save": "1",
-            },
+            element_props,
         )
         etree.SubElement(link, "ac:link-body").text = text
 
