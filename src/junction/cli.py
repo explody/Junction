@@ -36,10 +36,10 @@ def __verbosity_count_to_log_level(count: int) -> int:
 @click.group()
 @click.option(
     "-c",
-    "--confluence-api",
-    envvar="CONFLUENCE_API",
+    "--confluence-url",
+    envvar="CONFLUENCE_URL",
     required=True,
-    help="URL to the Confluence Cloud API i.e. https://<account name>.atlassian.net/wiki/rest/api",
+    help="URL to the Confluence Cloud API i.e. https://<account name>.atlassian.net",
 )
 @click.option(
     "-u",
@@ -68,17 +68,17 @@ def __verbosity_count_to_log_level(count: int) -> int:
 @click.pass_context
 def main(
     ctx: click.Context,
-    confluence_api: str,
+    confluence_url: str,
     user: str,
     key: str,
     space: str,
     verbose: int,
 ) -> None:
-    """Tools for managing and publishing to a Confleunce Cloud wiki using Markdown files."""
+    """Tools for managing and publishing to a Confluence Cloud wiki using Markdown files."""
     logger = click_log.basic_config()
     logger.setLevel(__verbosity_count_to_log_level(verbose))
     context = CliContext()
-    context.confluence = Confluence(confluence_api, user, key, space)
+    context.confluence = Confluence(confluence_url, user, key, space)
     ctx.obj = context
 
 
@@ -96,14 +96,14 @@ def _validate_git_dir(ctx: click.Context, param: click.Parameter, value: str) ->
 
 def _validate_commitish(ctx: click.Context, param: click.Parameter, value: str) -> str:
     try:
-        if value == '' or ctx.obj.repo.commit(value):
+        if value == "" or ctx.obj.repo.commit(value):
             return value
         else:
             raise click.BadParameter("no commit found by dereferencing that commitish")
     except Exception:
         raise click.BadParameter(
             '"{}" is an invalid commit-ish; valid examples include '
-            'HEAD~3 or a commit SHA'.format(value)
+            "HEAD~3 or a commit SHA".format(value)
         )
 
 
@@ -118,11 +118,11 @@ def _validate_branch(ctx: click.Context, param: click.Parameter, value: str) -> 
 @click.argument("branch", default="main", callback=_validate_branch)
 @click.option(
     "--since",
-    default='',
+    default="",
     required=False,
     callback=_validate_commitish,
     help="The commit hash/commit-ish to start from or don't pass this arg to use the entire "
-         "branch history",
+    "branch history",
 )
 @click.option(
     "--git-dir",
@@ -164,10 +164,13 @@ def delta(
     """
 
     filter_path = Path(content_path) if content_path else git_dir
-    commits = find_commits_on_branch_after(branch, since if since else None, my_ctx.repo)
+    commits = find_commits_on_branch_after(
+        branch, since if since else None, my_ctx.repo
+    )
     deltas = {
         c: Delta.from_modifications(
-            filter_modifications_to_folder(get_modifications(c), filter_path)
+            filter_modifications_to_folder(get_modifications(c), filter_path),
+            my_ctx.confluence,
         )
         for c in commits
     }

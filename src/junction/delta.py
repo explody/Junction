@@ -369,7 +369,7 @@ class UpdatePage(PageAction):
                 else [],
                 body=Body(
                     storage=ContentBody(value=self.new_body, representation="storage")
-                )
+                ),
             )
 
             if existing.id:
@@ -495,7 +495,9 @@ class Delta(object):
         for_all(self.updates, lambda x: x.execute(api_client))
 
     @staticmethod
-    def from_modifications(modifications: Iterable[Modification]) -> "Delta":
+    def from_modifications(
+        modifications: Iterable[Modification], api_client: Confluence
+    ) -> "Delta":
         """Builds a Delta from a list of (git) modifications.  Resulting Delta will work against
         wikis that have been updated and maintained exclusively with Junction, no other guarantees
         are provided.
@@ -535,7 +537,9 @@ class Delta(object):
                 me.adds.append(
                     CreatePage(
                         title,
-                        markdown_to_storage(mod.source_code, mod.front_matter),
+                        markdown_to_storage(
+                            api_client, mod.source_code, mod.front_matter
+                        ),
                         metadata,
                         ancestors,
                     )
@@ -544,7 +548,9 @@ class Delta(object):
                 me.updates.append(
                     UpdatePage(
                         title,
-                        markdown_to_storage(mod.source_code, mod.front_matter),
+                        markdown_to_storage(
+                            api_client, mod.source_code, mod.front_matter
+                        ),
                         metadata,
                         ancestors,
                     )
@@ -557,7 +563,11 @@ class Delta(object):
                 me.start_renames.append(MovePage(old_title, temporary_title))
                 me.finish_renames.append(MovePage(temporary_title, title, ancestors))
                 me.finish_renames.append(
-                    UpdatePage(title, markdown_to_storage(mod.source_code), ancestors)
+                    UpdatePage(
+                        title,
+                        markdown_to_storage(api_client, mod.source_code),
+                        ancestors,
+                    )
                 )
             else:
                 raise NotImplementedError(
